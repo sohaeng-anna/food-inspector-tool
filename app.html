@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TB MED 530 Inspector Tool</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; max-width: 600px; margin: 0 auto; background: #f8fafc; }
+    h2 { color: #1e3a8a; text-align: center; margin-bottom: 15px; }
+    .box { background: white; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 12px; }
+    input, textarea, button { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 6px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 15px; }
+    textarea { height: 80px; resize: vertical; }
+    button { background: #1e3a8a; color: white; font-weight: bold; cursor: pointer; border: none; margin-top: 10px; }
+    button:disabled { background: #94a3b8; }
+    .res-box { display: none; background: #f1f5f9; padding: 12px; border-radius: 6px; margin-top: 12px; }
+    .res-title { font-weight: bold; margin-top: 8px; font-size: 13px; color: #475569; }
+    .res-val { background: white; padding: 8px; border-radius: 4px; font-size: 14px; margin-top: 3px; white-space: pre-wrap; line-height: 1.4; }
+    .btn-copy { background: #334155; margin-top: 12px; }
+  </style>
+</head>
+<body>
+
+  <h2>📋 TB MED 530 Inspector</h2>
+
+  <div class="box">
+    <label><b>Gemini API Key:</b></label>
+    <div style="display:flex; gap:6px;">
+      <input type="password" id="apiKey" placeholder="AI Studio 키 입력">
+      <button onclick="saveKey()" style="width:70px; margin-top:6px; background:#475569;">저장</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <label><b>현장 상황 메모:</b></label>
+    <textarea id="memo" placeholder="예: RIF 온도가 화씨 45도임"></textarea>
+
+    <label style="margin-top:10px; display:block;"><b>현장 사진 첨부 (선택):</b></label>
+    <input type="file" id="pic" accept="image/*" capture="environment">
+
+    <button id="runBtn" onclick="runAnalysis()">DEF / REC 생성하기</button>
+    <div id="status" style="text-align:center; color:#2563eb; font-size:13px; margin-top:10px; word-break:break-all;"></div>
+
+    <div class="res-box" id="resultArea">
+      <div class="res-title">REF (Reference)</div>
+      <div class="res-val" id="outRef"></div>
+      <div class="res-title" style="color:#dc2626;">DEF (Deficiency)</div>
+      <div class="res-val" id="outDef"></div>
+      <div class="res-title" style="color:#16a34a;">REC (Recommendation)</div>
+      <div class="res-val" id="outRec"></div>
+      <button class="btn-copy" onclick="copyAll()">전체 영문 복사</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const k = localStorage.getItem("API_KEY");
+      if (k) document.getElementById("apiKey").value = k;
+    });
+
+    function saveKey() {
+      const v = document.getElementById("apiKey").value.trim();
+      if (!v) return alert("키를 입력해줘!");
+      localStorage.setItem("API_KEY", v);
+      alert("키가 저장되었어!");
+    }
+
+    let b64 = null, mime = null;
+    document.getElementById("pic").addEventListener("change", (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      mime = f.type;
+      const r = new FileReader();
+      r.onload = (ev) => { b64 = ev.target.result.split(',')[1]; };
+      r.readAsDataURL(f);
+    });
+
+    async function runAnalysis() {
+      const k = localStorage.getItem("API_KEY") || document.getElementById("apiKey").value.trim();
+      if (!k) return alert("API Key를 저장해줘!");
+      const txt = document.getElementById("memo").value.trim();
+      if (!txt && !b64) return alert("상황 메모나 사진을 넣어줘!");
+
+      const btn = document.getElementById("runBtn");
+      const status = document.getElementById("status");
+      const resArea = document.getElementById("resultArea");
+
+      btn.disabled = true;
+      status.style.color = "#2563eb";
+      status.innerText = "TB MED 530 규정 분석 중...";
+      resArea.style.display = "none";
+
+      const promptText = `You are an Environmental Health Inspector specialized in TB MED 530 (Tri-Service Food Code).
+Observation: ${txt || 'Refer to inspection image'}
+Output strictly valid JSON:
+{"ref": "TB MED 530 provision number & title", "def": "Deficiency statement", "rec": "Corrective recommendation"}`;
+
+      try {
+        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": k
+          },
+          body: JSON.stringify({
+            model: "gemini-3.8-flash",
+            input: promptText
+          })
+        });
+
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+
+        let outputStr = data.output_text || (data.outputs && data.outputs[0]?.text) || "";
+        outputStr = outputStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+        try {
+          const parsed = JSON.parse(outputStr);
+          document.getElementById("outRef").innerText = parsed.ref;
+          document.getElementById("outDef").innerText = parsed.def;
+          document.getElementById("outRec").innerText = parsed.rec;
+        } catch {
+          document.getElementById("outRef").innerText = "TB MED 530";
+          document.getElementById("outDef").innerText = outputStr;
+          document.getElementById("outRec").innerText = "Take corrective action as required.";
+        }
+
+        resArea.style.display = "block";
+        status.innerText = "";
+      } catch (err) {
+        status.style.color = "#dc2626";
+        status.innerText = "오류: " + err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function copyAll() {
+      const text = `REF: ${document.getElementById("outRef").innerText}\nDEF: ${document.getElementById("outDef").innerText}\nREC: ${document.getElementById("outRec").innerText}`;
+      navigator.clipboard.writeText(text).then(() => alert("전체 복사 완료!"));
+    }
+  </script>
+</body>
+</html>
