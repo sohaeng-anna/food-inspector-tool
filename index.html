@@ -3,33 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
   <title>TB MED 530 Inspector Tool</title>
 
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      padding: 15px;
       max-width: 600px;
       margin: 0 auto;
+      padding: 15px;
       background: #f8fafc;
     }
 
     h2 {
-      color: #1e3a8a;
       text-align: center;
-      margin-bottom: 15px;
+      color: #1e3a8a;
+      margin-bottom: 18px;
     }
 
     .box {
       background: white;
       padding: 15px;
-      border-radius: 8px;
       border: 1px solid #cbd5e1;
+      border-radius: 8px;
       margin-bottom: 12px;
     }
 
-    input, textarea, button {
+    label {
+      display: block;
+      margin-top: 8px;
+    }
+
+    input,
+    textarea,
+    button {
       width: 100%;
       box-sizing: border-box;
       padding: 10px;
@@ -40,17 +47,16 @@
     }
 
     textarea {
-      height: 90px;
+      height: 100px;
       resize: vertical;
     }
 
     button {
+      border: none;
       background: #1e3a8a;
       color: white;
       font-weight: bold;
       cursor: pointer;
-      border: none;
-      margin-top: 10px;
     }
 
     button:disabled {
@@ -58,103 +64,127 @@
       cursor: not-allowed;
     }
 
-    .res-box {
-      display: none;
-      background: #f1f5f9;
-      padding: 12px;
-      border-radius: 6px;
-      margin-top: 12px;
+    .key-row {
+      display: flex;
+      gap: 6px;
     }
 
-    .res-title {
-      font-weight: bold;
-      margin-top: 10px;
-      font-size: 13px;
-      color: #475569;
-    }
-
-    .res-val {
-      background: white;
-      padding: 10px;
-      border-radius: 4px;
-      border: 1px solid #e2e8f0;
-      font-size: 14px;
-      margin-top: 3px;
-      white-space: pre-wrap;
-      line-height: 1.5;
-    }
-
-    .btn-copy {
-      background: #334155;
-      margin-top: 14px;
-    }
-
-    #status {
-      text-align: center;
-      color: #2563eb;
-      font-size: 13px;
-      margin-top: 10px;
-      white-space: pre-wrap;
-      word-break: break-word;
+    .key-row button {
+      width: 70px;
     }
 
     .small {
       font-size: 11px;
       color: #64748b;
       margin-top: 7px;
-      line-height: 1.4;
+    }
+
+    #status {
+      text-align: center;
+      font-size: 13px;
+      margin-top: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #resultArea {
+      display: none;
+      margin-top: 15px;
+      padding: 12px;
+      background: #f1f5f9;
+      border-radius: 6px;
+    }
+
+    .title {
+      font-size: 13px;
+      font-weight: bold;
+      margin-top: 12px;
+      color: #475569;
+    }
+
+    .def-title {
+      color: #dc2626;
+    }
+
+    .rec-title {
+      color: #16a34a;
+    }
+
+    .result {
+      background: white;
+      border: 1px solid #e2e8f0;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 4px;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+
+    .copy-btn {
+      background: #334155;
+      margin-top: 15px;
     }
   </style>
 </head>
+
 
 <body>
 
 <h2>📋 TB MED 530 Inspector Tool</h2>
 
+
+<!-- API KEY -->
+
 <div class="box">
 
-  <label><b>Gemini API Key:</b></label>
+  <label>
+    <b>Gemini API Key:</b>
+  </label>
 
-  <div style="display:flex; gap:6px;">
+  <div class="key-row">
+
     <input
       type="password"
       id="apiKey"
       placeholder="Google AI Studio API Key"
     >
 
-    <button
-      onclick="saveKey()"
-      style="width:70px; margin-top:6px; background:#475569;"
-    >
+    <button onclick="saveKey()">
       저장
     </button>
+
   </div>
 
   <div class="small">
-    API Key는 이 브라우저에만 저장됩니다.
+    API Key는 현재 브라우저의 localStorage에 저장됩니다.
   </div>
 
 </div>
 
 
+
+<!-- INSPECTION -->
+
 <div class="box">
 
-  <label><b>현장 상황 메모:</b></label>
+  <label>
+    <b>현장 상황 메모:</b>
+  </label>
 
   <textarea
     id="memo"
-    placeholder="예: RIF 온도가 화씨 45도임"
+    placeholder="예: 냉장고 온도가 45°F"
   ></textarea>
 
 
-  <label style="margin-top:10px; display:block;">
+  <label>
     <b>현장 사진 첨부 (선택):</b>
   </label>
 
   <input
     type="file"
     id="pic"
-    accept="image/*"
+    accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
     capture="environment"
   >
 
@@ -170,49 +200,43 @@
   <div id="status"></div>
 
 
-  <div
-    class="res-box"
-    id="resultArea"
-  >
 
-    <div class="res-title">
+  <!-- RESULT -->
+
+  <div id="resultArea">
+
+    <div class="title">
       REF (Reference)
     </div>
 
     <div
-      class="res-val"
+      class="result"
       id="outRef"
     ></div>
 
 
-    <div
-      class="res-title"
-      style="color:#dc2626;"
-    >
+    <div class="title def-title">
       DEF (Deficiency)
     </div>
 
     <div
-      class="res-val"
+      class="result"
       id="outDef"
     ></div>
 
 
-    <div
-      class="res-title"
-      style="color:#16a34a;"
-    >
+    <div class="title rec-title">
       REC (Recommendation)
     </div>
 
     <div
-      class="res-val"
+      class="result"
       id="outRec"
     ></div>
 
 
     <button
-      class="btn-copy"
+      class="copy-btn"
       onclick="copyAll()"
     >
       전체 영문 복사
@@ -223,19 +247,34 @@
 </div>
 
 
+
 <script>
 
-/* ============================================
+/* =====================================================
+   SETTINGS
+===================================================== */
+
+const MODEL = "gemini-3.8-flash";
+
+const API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/interactions";
+
+
+
+/* =====================================================
    API KEY
-============================================ */
+===================================================== */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", function () {
 
-  const saved =
+  const savedKey =
     localStorage.getItem("API_KEY");
 
-  if (saved) {
-    document.getElementById("apiKey").value = saved;
+  if (savedKey) {
+
+    document.getElementById("apiKey").value =
+      savedKey;
+
   }
 
 });
@@ -244,112 +283,156 @@ document.addEventListener("DOMContentLoaded", () => {
 function saveKey() {
 
   const key =
-    document.getElementById("apiKey").value.trim();
+    document
+      .getElementById("apiKey")
+      .value
+      .trim();
+
 
   if (!key) {
+
     alert("API Key를 입력해줘!");
+
     return;
+
   }
 
-  localStorage.setItem("API_KEY", key);
+
+  localStorage.setItem(
+    "API_KEY",
+    key
+  );
+
 
   alert("API Key가 저장되었어!");
 
 }
 
 
-/* ============================================
+
+/* =====================================================
    IMAGE
-============================================ */
+===================================================== */
 
 let imageBase64 = null;
 let imageMime = null;
 
 
-document.getElementById("pic")
-.addEventListener("change", function(event) {
+document
+  .getElementById("pic")
+  .addEventListener(
+    "change",
+    function (event) {
 
-  const file = event.target.files[0];
-
-  imageBase64 = null;
-  imageMime = null;
-
-  if (!file) return;
-
-
-  if (!file.type.startsWith("image/")) {
-
-    alert("이미지 파일만 첨부할 수 있어.");
-
-    event.target.value = "";
-
-    return;
-  }
+      imageBase64 = null;
+      imageMime = null;
 
 
-  /*
-    Interactions API inline 요청 전체가
-    너무 커지는 것을 방지
-  */
-
-  if (file.size > 8 * 1024 * 1024) {
-
-    alert("사진은 8MB 이하로 사용해줘.");
-
-    event.target.value = "";
-
-    return;
-  }
+      const file =
+        event.target.files[0];
 
 
-  imageMime = file.type || "image/jpeg";
+      if (!file) {
+        return;
+      }
 
 
-  const reader = new FileReader();
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/heic",
+        "image/heif"
+      ];
 
 
-  reader.onload = function(e) {
+      if (!allowedTypes.includes(file.type)) {
 
-    const dataUrl = e.target.result;
+        alert(
+          "JPG, PNG, WEBP, HEIC 이미지 파일을 사용해줘."
+        );
 
-    imageBase64 =
-      dataUrl.substring(
-        dataUrl.indexOf(",") + 1
-      );
+        event.target.value = "";
 
-  };
+        return;
 
-
-  reader.onerror = function() {
-
-    imageBase64 = null;
-    imageMime = null;
-
-    alert("사진을 읽을 수 없어.");
-
-  };
+      }
 
 
-  reader.readAsDataURL(file);
+      if (file.size > 8 * 1024 * 1024) {
 
-});
+        alert(
+          "사진은 8MB 이하로 사용해줘."
+        );
+
+        event.target.value = "";
+
+        return;
+
+      }
 
 
-/* ============================================
-   ANALYSIS
-============================================ */
+      imageMime =
+        file.type;
+
+
+      const reader =
+        new FileReader();
+
+
+      reader.onload =
+        function (e) {
+
+          const dataUrl =
+            e.target.result;
+
+
+          imageBase64 =
+            dataUrl.split(",")[1];
+
+        };
+
+
+      reader.onerror =
+        function () {
+
+          imageBase64 = null;
+          imageMime = null;
+
+          alert(
+            "사진을 읽는 중 오류가 발생했어."
+          );
+
+        };
+
+
+      reader.readAsDataURL(file);
+
+    }
+  );
+
+
+
+/* =====================================================
+   RUN ANALYSIS
+===================================================== */
 
 async function runAnalysis() {
 
   const key =
     localStorage.getItem("API_KEY")
     ||
-    document.getElementById("apiKey").value.trim();
+    document
+      .getElementById("apiKey")
+      .value
+      .trim();
 
 
   if (!key) {
 
-    alert("Gemini API Key를 입력하고 저장해줘!");
+    alert(
+      "Gemini API Key를 입력하고 저장해줘!"
+    );
 
     return;
 
@@ -357,94 +440,119 @@ async function runAnalysis() {
 
 
   const memo =
-    document.getElementById("memo").value.trim();
+    document
+      .getElementById("memo")
+      .value
+      .trim();
 
 
   if (!memo && !imageBase64) {
 
-    alert("현장 상황 메모 또는 사진을 넣어줘!");
+    alert(
+      "현장 상황 메모 또는 사진을 넣어줘!"
+    );
 
     return;
 
   }
 
 
-  const btn =
+
+  const button =
     document.getElementById("runBtn");
+
 
   const status =
     document.getElementById("status");
+
 
   const resultArea =
     document.getElementById("resultArea");
 
 
-  btn.disabled = true;
 
-  resultArea.style.display = "none";
+  button.disabled = true;
 
-  status.style.color = "#2563eb";
+  resultArea.style.display =
+    "none";
+
+
+  status.style.color =
+    "#2563eb";
+
 
   status.innerText =
     "🔎 Gemini 3.8 Flash가 현장 상황을 분석 중입니다...";
 
 
+
   try {
 
 
-    /* ========================================
+    /* =================================================
        PROMPT
-    ======================================== */
+    ================================================= */
 
     const prompt = `
+
 You are assisting a U.S. Army Environmental Health Technician
 conducting a food sanitation inspection.
 
-Analyze the field observation using food safety principles
+Analyze the inspection observation using food safety principles
 applicable to TB MED 530.
 
 FIELD OBSERVATION:
-${memo || "See attached inspection photograph."}
 
-Your task is to produce three items:
+${memo || "Analyze the attached inspection photograph."}
 
-1. REF
-Provide the applicable TB MED 530 reference.
+
+Generate the following three fields.
+
+
+REF:
+
+Identify the applicable TB MED 530 regulatory reference.
 
 IMPORTANT:
-Never fabricate a paragraph, section, chapter, table,
-or regulatory citation.
 
-If you cannot determine the exact TB MED 530 citation
-with confidence from the information provided,
-write exactly:
+Do NOT fabricate or guess a paragraph number, section number,
+chapter number, table number, or regulatory citation.
+
+If the exact TB MED 530 citation cannot be determined with
+confidence from the information available, write exactly:
 
 TB MED 530 – verify exact section.
 
-2. DEF
-Write a concise professional deficiency statement
-appropriate for an Environmental Health inspection report.
 
-Describe what was actually observed.
+DEF:
 
-Do not invent facts that were not supplied by the inspector
+Write a concise professional deficiency statement suitable
+for a U.S. Army Environmental Health inspection report.
+
+Describe only the condition actually reported by the inspector
 or clearly visible in the photograph.
 
-3. REC
-Write a concise professional recommendation describing
+Do not invent temperatures, food types, dates, times,
+equipment conditions, employee actions, or other facts.
+
+
+REC:
+
+Write a concise professional recommendation explaining
 the corrective action required.
 
-Use professional U.S. Army Environmental Health
-inspection language.
+Use clear professional inspection language.
 
-Keep DEF and REC concise and suitable for direct
-copying into an inspection report.
+The DEF and REC should be suitable for direct copying
+into an inspection report.
+
 `;
 
 
-    /* ========================================
-       INTERACTIONS INPUT
-    ======================================== */
+
+    /* =================================================
+       INPUT
+    ================================================= */
 
     const input = [
 
@@ -456,10 +564,6 @@ copying into an inspection report.
     ];
 
 
-    /*
-      사진이 있으면 Interactions API의
-      inline image 형식으로 추가
-    */
 
     if (imageBase64) {
 
@@ -469,51 +573,31 @@ copying into an inspection report.
 
         data: imageBase64,
 
-        mime_type:
-          imageMime || "image/jpeg"
+        mime_type: imageMime
 
       });
 
     }
 
 
-    /* ========================================
-       REQUEST BODY
-    ======================================== */
 
-    const body = {
+    /* =================================================
+       STRUCTURED OUTPUT
+    ================================================= */
 
-      model: "gemini-3.8-flash",
+    const requestBody = {
+
+      model: MODEL,
 
       input: input,
-
-      system_instruction:
-        `You are a professional Environmental Health
-inspection writing assistant.
-
-Your primary task is to help prepare concise food sanitation
-inspection findings.
-
-Never fabricate regulatory citations.
-
-Do not assume facts that are not contained in the inspector's
-observation or clearly visible in an attached photograph.
-
-Return only the requested structured JSON response.`,
-
-
-      generation_config: {
-
-        temperature: 0.2
-
-      },
 
 
       response_format: {
 
         type: "text",
 
-        mime_type: "application/json",
+        mime_type:
+          "application/json",
 
         schema: {
 
@@ -522,21 +606,15 @@ Return only the requested structured JSON response.`,
           properties: {
 
             ref: {
-              type: "string",
-              description:
-                "Applicable TB MED 530 reference."
+              type: "string"
             },
 
             def: {
-              type: "string",
-              description:
-                "Professional deficiency statement."
+              type: "string"
             },
 
             rec: {
-              type: "string",
-              description:
-                "Professional corrective recommendation."
+              type: "string"
             }
 
           },
@@ -545,9 +623,7 @@ Return only the requested structured JSON response.`,
             "ref",
             "def",
             "rec"
-          ],
-
-          additionalProperties: false
+          ]
 
         }
 
@@ -556,13 +632,27 @@ Return only the requested structured JSON response.`,
     };
 
 
-    /* ========================================
-       INTERACTIONS API
-    ======================================== */
+
+    /* =================================================
+       CALL GEMINI
+    ================================================= */
+
+    console.log(
+      "Calling model:",
+      MODEL
+    );
+
+
+    console.log(
+      "Calling API:",
+      API_URL
+    );
+
+
 
     const response =
       await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/interactions",
+        API_URL,
         {
 
           method: "POST",
@@ -578,15 +668,18 @@ Return only the requested structured JSON response.`,
           },
 
           body:
-            JSON.stringify(body)
+            JSON.stringify(
+              requestBody
+            )
 
         }
       );
 
 
-    /* ========================================
-       ERROR RESPONSE
-    ======================================== */
+
+    /* =================================================
+       API ERROR
+    ================================================= */
 
     if (!response.ok) {
 
@@ -598,6 +691,12 @@ Return only the requested structured JSON response.`,
 
         const errorData =
           await response.json();
+
+
+        console.error(
+          "Gemini API error:",
+          errorData
+        );
 
 
         if (
@@ -613,69 +712,92 @@ Return only the requested structured JSON response.`,
 
       }
 
-      catch (e) {
+      catch (parseError) {
 
-        // JSON 오류 응답이 아닌 경우
+        console.error(
+          parseError
+        );
 
       }
 
 
-      throw new Error(errorMessage);
+      throw new Error(
+        errorMessage
+      );
 
     }
 
 
-    /* ========================================
-       RESPONSE
-    ======================================== */
+
+    /* =================================================
+       READ RESPONSE
+    ================================================= */
 
     const data =
       await response.json();
 
 
     console.log(
-      "Gemini interaction response:",
+      "Gemini response:",
       data
     );
 
 
-    /*
-      Interactions API는 output_text를 반환한다.
-    */
-
-    let outputText =
-      data.output_text || "";
-
 
     /*
-      혹시 output_text가 없는 응답 형태에 대비해서
-      steps 안의 model_output text도 확인한다.
+      REST Interactions API는
+      SDK의 output_text convenience property와 달리
+      전체 Interaction resource를 반환할 수 있으므로
+      steps의 model_output에서 최종 text를 읽는다.
     */
 
-    if (!outputText && Array.isArray(data.steps)) {
 
-      const texts = [];
+    let outputText = "";
+
+
+    if (
+      typeof data.output_text === "string"
+      &&
+      data.output_text.trim()
+    ) {
+
+      outputText =
+        data.output_text.trim();
+
+    }
+
+
+
+    if (
+      !outputText
+      &&
+      Array.isArray(data.steps)
+    ) {
+
+      const textParts = [];
 
 
       for (const step of data.steps) {
 
-        if (!step) continue;
-
-
         if (
-          step.type === "model_output" &&
+          step &&
+          step.type === "model_output"
+          &&
           Array.isArray(step.content)
         ) {
 
-          for (const item of step.content) {
+          for (const content of step.content) {
 
             if (
-              item &&
-              item.type === "text" &&
-              item.text
+              content &&
+              content.type === "text"
+              &&
+              typeof content.text === "string"
             ) {
 
-              texts.push(item.text);
+              textParts.push(
+                content.text
+              );
 
             }
 
@@ -686,9 +808,13 @@ Return only the requested structured JSON response.`,
       }
 
 
-      outputText = texts.join("");
+      outputText =
+        textParts
+          .join("")
+          .trim();
 
     }
+
 
 
     if (!outputText) {
@@ -700,9 +826,10 @@ Return only the requested structured JSON response.`,
     }
 
 
-    /* ========================================
-       JSON PARSE
-    ======================================== */
+
+    /* =================================================
+       PARSE JSON
+    ================================================= */
 
     let result;
 
@@ -710,51 +837,57 @@ Return only the requested structured JSON response.`,
     try {
 
       result =
-        JSON.parse(outputText);
+        JSON.parse(
+          outputText
+        );
 
     }
 
-    catch (e) {
+    catch (error) {
 
       console.error(
-        "RAW OUTPUT:",
+        "Gemini raw output:",
         outputText
       );
 
+
       throw new Error(
-        "Gemini 결과를 JSON으로 읽을 수 없습니다."
+        "Gemini 응답을 JSON으로 읽을 수 없습니다."
       );
 
     }
 
 
-    /* ========================================
-       RESULT
-    ======================================== */
 
-    const ref =
-      result.ref ||
-      "TB MED 530 – verify exact section.";
+    /* =================================================
+       DISPLAY
+    ================================================= */
 
-
-    const def =
-      result.def ||
-      "No deficiency generated.";
-
-
-    const rec =
-      result.rec ||
-      "No recommendation generated.";
+    document
+      .getElementById("outRef")
+      .innerText =
+        result.ref
+        ||
+        "TB MED 530 – verify exact section.";
 
 
-    document.getElementById("outRef").innerText =
-      ref;
 
-    document.getElementById("outDef").innerText =
-      def;
+    document
+      .getElementById("outDef")
+      .innerText =
+        result.def
+        ||
+        "No deficiency generated.";
 
-    document.getElementById("outRec").innerText =
-      rec;
+
+
+    document
+      .getElementById("outRec")
+      .innerText =
+        result.rec
+        ||
+        "No recommendation generated.";
+
 
 
     resultArea.style.display =
@@ -771,9 +904,19 @@ Return only the requested structured JSON response.`,
 
   }
 
+
+
+  /* ===================================================
+     ERROR
+  =================================================== */
+
   catch (error) {
 
-    console.error(error);
+
+    console.error(
+      "Inspector Tool Error:",
+      error
+    );
 
 
     status.style.color =
@@ -781,52 +924,66 @@ Return only the requested structured JSON response.`,
 
 
     let message =
-      error.message ||
+      error.message
+      ||
       "알 수 없는 오류가 발생했습니다.";
 
 
-    /*
-      화면에 엄청 긴 API 오류가 출력되는 것 방지
-    */
 
-    if (message.length > 400) {
+    if (message.length > 500) {
 
       message =
-        message.substring(0, 400)
-        + "...";
+        message.substring(0, 500)
+        +
+        "...";
 
     }
 
 
+
     status.innerText =
-      "❌ 분석 실패\n" +
+      "❌ 분석 실패\n"
+      +
       message;
 
   }
 
+
+
   finally {
 
-    btn.disabled = false;
+    button.disabled =
+      false;
 
   }
 
 }
 
 
-/* ============================================
-   COPY RESULT
-============================================ */
+
+/* =====================================================
+   COPY
+===================================================== */
 
 async function copyAll() {
 
   const ref =
-    document.getElementById("outRef").innerText;
+    document
+      .getElementById("outRef")
+      .innerText;
+
 
   const def =
-    document.getElementById("outDef").innerText;
+    document
+      .getElementById("outDef")
+      .innerText;
+
 
   const rec =
-    document.getElementById("outRec").innerText;
+    document
+      .getElementById("outRec")
+      .innerText;
+
 
 
   const text =
@@ -837,30 +994,55 @@ DEF: ${def}
 REC: ${rec}`;
 
 
+
   try {
 
-    await navigator.clipboard.writeText(text);
+    await navigator
+      .clipboard
+      .writeText(text);
 
-    alert("REF / DEF / REC가 복사되었어!");
+
+    alert(
+      "REF / DEF / REC가 복사되었어!"
+    );
 
   }
 
+
   catch (error) {
 
+
     const temp =
-      document.createElement("textarea");
+      document.createElement(
+        "textarea"
+      );
 
-    temp.value = text;
 
-    document.body.appendChild(temp);
+    temp.value =
+      text;
+
+
+    document.body.appendChild(
+      temp
+    );
+
 
     temp.select();
 
-    document.execCommand("copy");
 
-    document.body.removeChild(temp);
+    document.execCommand(
+      "copy"
+    );
 
-    alert("REF / DEF / REC가 복사되었어!");
+
+    document.body.removeChild(
+      temp
+    );
+
+
+    alert(
+      "REF / DEF / REC가 복사되었어!"
+    );
 
   }
 
