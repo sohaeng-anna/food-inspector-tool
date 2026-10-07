@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TB MED 530 Inspector Tool</title>
+  <title>TB MED 530 Inspector Tool v2.0</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; max-width: 600px; margin: 0 auto; background: #f8fafc; }
     h2 { color: #1e3a8a; text-align: center; margin-bottom: 15px; }
@@ -20,7 +20,7 @@
 </head>
 <body>
 
-  <h2>📋 TB MED 530 Inspector</h2>
+  <h2>📋 TB MED 530 Inspector (최신버전)</h2>
 
   <div class="box">
     <label><b>Gemini API Key:</b></label>
@@ -70,4 +70,101 @@
       if (!f) return;
       mime = f.type;
       const r = new FileReader();
-      r.onload = (ev) => { b64 = ev.target.result
+      r.onload = (ev) => { b64 = ev.target.result.split(',')[1]; };
+      r.readAsDataURL(f);
+    });
+
+    async function runAnalysis() {
+      const k = localStorage.getItem("API_KEY") || document.getElementById("apiKey").value.trim();
+      if (!k) return alert("API Key를 저장해줘!");
+      const txt = document.getElementById("memo").value.trim();
+      if (!txt && !b64) return alert("상황 메모나 사진을 넣어줘!");
+
+      const btn = document.getElementById("runBtn");
+      const status = document.getElementById("status");
+      const resArea = document.getElementById("resultArea");
+      btn.disabled = true;
+      status.style.color = "#475569";
+      status.innerText = "사용 가능한 AI 모델 검색 및 매칭 중...";
+      resArea.style.display = "none";
+
+      const systemPrompt = `You are a certified Environmental Health Inspector specializing in TB MED 530 (Tri-Service Food Code).
+Analyze this food inspection finding and output strictly valid JSON without markdown fences:
+{
+  "ref": "TB MED 530 provision number & short title",
+  "def": "Concise standard USFK/DoD deficiency text",
+  "rec": "Actionable standard corrective recommendation"
+}`;
+
+      const parts = [];
+      if (txt) parts.push({ text: `Observation: ${txt}` });
+      if (b64) parts.push({ inline_data: { mime_type: mime, data: b64 } });
+
+      const payload = {
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: "user", parts: parts }],
+        generationConfig: { response_mime_type: "application/json", temperature: 0.2 }
+      };
+
+      try {
+        // 1. 내 API 키로 사용 가능한 모델 목록 자동 조회
+        const modelListRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${k}`);
+        const modelListData = await modelListRes.json();
+        
+        let candidateModels = [];
+        if (modelListData.models) {
+          candidateModels = modelListData.models
+            .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+            .map(m => m.name.replace("models/", ""));
+        }
+
+        // 우선순위 정렬: flash 계열 우선
+        candidateModels.sort((a, b) => (b.includes("flash") ? 1 : 0) - (a.includes("flash") ? 1 : 0));
+
+        if (candidateModels.length === 0) {
+          candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+        }
+
+        let done = false;
+        let lastErr = "";
+
+        for (const targetModel of candidateModels) {
+          try {
+            status.innerText = `[${targetModel}] 분석 중...`;
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${k}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.error) {
+              lastErr = data.error.message;
+              continue;
+            }
+
+            let raw = data.candidates[0].content.parts[0].text;
+            raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+            const parsed = JSON.parse(raw);
+            document.getElementById("outRef").innerText = parsed.ref;
+            document.getElementById("outDef").innerText = parsed.def;
+            document.getElementById("outRec").innerText = parsed.rec;
+            resArea.style.display = "block";
+            status.innerText = "";
+            done = true;
+            break;
+          } catch (e) {
+            lastErr = e.message;
+          }
+        }
+
+        if (!done) {
+          status.style.color = "#dc2626";
+          status.innerText = "오류 발생: " + lastErr;
+        }
+
+      } catch (networkErr) {
+        status.style.color = "#dc2626";
+        status.innerText = "API 통신 오류: " + networkErr.message;
+      } finally {
+        btn.disabled = false;
+      }
