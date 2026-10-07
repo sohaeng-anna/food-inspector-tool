@@ -89,7 +89,7 @@
       resArea.style.display = "none";
 
       const prompt = `You are a certified Environmental Health Inspector specializing in TB MED 530 (Tri-Service Food Code).
-Analyze this food inspection finding and output strictly valid JSON:
+Analyze this food inspection finding and output strictly valid JSON without markdown fences:
 {
   "ref": "TB MED 530 provision number & short title",
   "def": "Concise standard USFK/DoD deficiency text",
@@ -105,8 +105,8 @@ Analyze this food inspection finding and output strictly valid JSON:
         generationConfig: { response_mime_type: "application/json", temperature: 0.2 }
       };
 
-      // v1beta 및 기본 모델 호출
-      const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+      // 안내받은 최신 정식 모델명 적용
+      const models = ["gemini-3.8-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro"];
       let done = false;
       let finalErrMsg = "";
 
