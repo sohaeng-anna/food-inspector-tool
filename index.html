@@ -38,7 +38,7 @@
     <input type="file" id="pic" accept="image/*" capture="environment">
 
     <button id="runBtn" onclick="runAnalysis()">DEF / REC 생성하기</button>
-    <div id="status" style="text-align:center; color:#64748b; font-size:14px; margin-top:8px;"></div>
+    <div id="status" style="text-align:center; color:#dc2626; font-size:13px; margin-top:10px; word-break:break-all;"></div>
 
     <div class="res-box" id="resultArea">
       <div class="res-title">REF (Reference)</div>
@@ -84,11 +84,12 @@
       const status = document.getElementById("status");
       const resArea = document.getElementById("resultArea");
       btn.disabled = true;
+      status.style.color = "#475569";
       status.innerText = "TB MED 530 규정 매칭 중...";
       resArea.style.display = "none";
 
       const prompt = `You are a certified Environmental Health Inspector specializing in TB MED 530 (Tri-Service Food Code).
-Analyze this food inspection finding and output strictly valid JSON without markdown fences:
+Analyze this food inspection finding and output strictly valid JSON:
 {
   "ref": "TB MED 530 provision number & short title",
   "def": "Concise standard USFK/DoD deficiency text",
@@ -100,15 +101,14 @@ Analyze this food inspection finding and output strictly valid JSON without mark
       if (b64) parts.push({ inline_data: { mime_type: mime, data: b64 } });
 
       const payload = {
-        system_instruction: { parts: [{ text: prompt }] },
         contents: [{ role: "user", parts: parts }],
         generationConfig: { response_mime_type: "application/json", temperature: 0.2 }
       };
 
-      // 1순위: 이전 에러 화면에서 추천한 공식 gemini-3.8-flash, 2순위: fallback
-      const models = ["gemini-3.8-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+      // v1beta 및 기본 모델 호출
+      const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
       let done = false;
-      let errDetail = "";
+      let finalErrMsg = "";
 
       for (const m of models) {
         try {
@@ -119,11 +119,12 @@ Analyze this food inspection finding and output strictly valid JSON without mark
           });
           const data = await res.json();
           if (data.error) {
-            errDetail = data.error.message;
+            finalErrMsg = `${m}: ${data.error.message}`;
             continue;
           }
 
-          let raw = data.candidates[0].content.parts[0].text.replace(/```json/gi,'').replace(/```/g,'').trim();
+          let raw = data.candidates[0].content.parts[0].text;
+          raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
           const parsed = JSON.parse(raw);
           document.getElementById("outRef").innerText = parsed.ref;
           document.getElementById("outDef").innerText = parsed.def;
@@ -133,12 +134,13 @@ Analyze this food inspection finding and output strictly valid JSON without mark
           done = true;
           break;
         } catch (err) {
-          errDetail = err.message;
+          finalErrMsg = err.message;
         }
       }
 
       if (!done) {
-        status.innerText = "오류 발생: " + errDetail;
+        status.style.color = "#dc2626";
+        status.innerText = "상세 오류: " + finalErrMsg;
       }
       btn.disabled = false;
     }
