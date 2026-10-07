@@ -8,8 +8,7 @@
 
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                   Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       padding: 15px;
       max-width: 600px;
       margin: 0 auto;
@@ -30,9 +29,7 @@
       margin-bottom: 12px;
     }
 
-    input,
-    textarea,
-    button {
+    input, textarea, button {
       width: 100%;
       box-sizing: border-box;
       padding: 10px;
@@ -43,7 +40,7 @@
     }
 
     textarea {
-      height: 100px;
+      height: 90px;
       resize: vertical;
     }
 
@@ -71,7 +68,7 @@
 
     .res-title {
       font-weight: bold;
-      margin-top: 12px;
+      margin-top: 10px;
       font-size: 13px;
       color: #475569;
     }
@@ -80,16 +77,16 @@
       background: white;
       padding: 10px;
       border-radius: 4px;
+      border: 1px solid #e2e8f0;
       font-size: 14px;
       margin-top: 3px;
       white-space: pre-wrap;
       line-height: 1.5;
-      border: 1px solid #e2e8f0;
     }
 
     .btn-copy {
       background: #334155;
-      margin-top: 15px;
+      margin-top: 14px;
     }
 
     #status {
@@ -97,14 +94,15 @@
       color: #2563eb;
       font-size: 13px;
       margin-top: 10px;
-      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
 
-    .notice {
-      font-size: 12px;
+    .small {
+      font-size: 11px;
       color: #64748b;
-      line-height: 1.5;
-      margin-top: 8px;
+      margin-top: 7px;
+      line-height: 1.4;
     }
   </style>
 </head>
@@ -113,48 +111,35 @@
 
 <h2>📋 TB MED 530 Inspector Tool</h2>
 
-
-<!-- API KEY -->
 <div class="box">
 
-  <label>
-    <b>Gemini API Key:</b>
-  </label>
+  <label><b>Gemini API Key:</b></label>
 
   <div style="display:flex; gap:6px;">
-
     <input
       type="password"
       id="apiKey"
-      placeholder="Google AI Studio API Key 입력"
+      placeholder="Google AI Studio API Key"
     >
 
     <button
       onclick="saveKey()"
-      style="
-        width:70px;
-        margin-top:6px;
-        background:#475569;
-      "
+      style="width:70px; margin-top:6px; background:#475569;"
     >
       저장
     </button>
-
   </div>
 
-  <div class="notice">
-    API Key는 현재 브라우저의 localStorage에 저장됩니다.
+  <div class="small">
+    API Key는 이 브라우저에만 저장됩니다.
   </div>
 
 </div>
 
 
-<!-- INSPECTION -->
 <div class="box">
 
-  <label>
-    <b>현장 상황 메모:</b>
-  </label>
+  <label><b>현장 상황 메모:</b></label>
 
   <textarea
     id="memo"
@@ -162,12 +147,7 @@
   ></textarea>
 
 
-  <label
-    style="
-      margin-top:12px;
-      display:block;
-    "
-  >
+  <label style="margin-top:10px; display:block;">
     <b>현장 사진 첨부 (선택):</b>
   </label>
 
@@ -190,7 +170,6 @@
   <div id="status"></div>
 
 
-  <!-- RESULTS -->
   <div
     class="res-box"
     id="resultArea"
@@ -246,153 +225,131 @@
 
 <script>
 
-/* =====================================================
+/* ============================================
    API KEY
-===================================================== */
+============================================ */
 
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
+document.addEventListener("DOMContentLoaded", () => {
 
-    const savedKey =
-      localStorage.getItem("API_KEY");
+  const saved =
+    localStorage.getItem("API_KEY");
 
-    if (savedKey) {
-      document.getElementById("apiKey").value =
-        savedKey;
-    }
-
+  if (saved) {
+    document.getElementById("apiKey").value = saved;
   }
-);
+
+});
 
 
 function saveKey() {
 
   const key =
-    document
-      .getElementById("apiKey")
-      .value
-      .trim();
+    document.getElementById("apiKey").value.trim();
 
   if (!key) {
-
     alert("API Key를 입력해줘!");
-
     return;
-
   }
 
-  localStorage.setItem(
-    "API_KEY",
-    key
-  );
+  localStorage.setItem("API_KEY", key);
 
   alert("API Key가 저장되었어!");
 
 }
 
 
-
-/* =====================================================
+/* ============================================
    IMAGE
-===================================================== */
+============================================ */
 
 let imageBase64 = null;
 let imageMime = null;
 
 
-document
-  .getElementById("pic")
-  .addEventListener(
-    "change",
-    (event) => {
+document.getElementById("pic")
+.addEventListener("change", function(event) {
 
-      const file =
-        event.target.files[0];
+  const file = event.target.files[0];
 
-      imageBase64 = null;
-      imageMime = null;
+  imageBase64 = null;
+  imageMime = null;
 
-      if (!file) {
-        return;
-      }
+  if (!file) return;
 
 
-      /* 이미지 크기 제한 */
-      if (file.size > 10 * 1024 * 1024) {
+  if (!file.type.startsWith("image/")) {
 
-        alert(
-          "사진 크기가 너무 커. 10MB 이하 사진을 사용해줘."
-        );
+    alert("이미지 파일만 첨부할 수 있어.");
 
-        event.target.value = "";
+    event.target.value = "";
 
-        return;
-      }
+    return;
+  }
 
 
-      imageMime =
-        file.type || "image/jpeg";
+  /*
+    Interactions API inline 요청 전체가
+    너무 커지는 것을 방지
+  */
+
+  if (file.size > 8 * 1024 * 1024) {
+
+    alert("사진은 8MB 이하로 사용해줘.");
+
+    event.target.value = "";
+
+    return;
+  }
 
 
-      const reader =
-        new FileReader();
+  imageMime = file.type || "image/jpeg";
 
 
-      reader.onload =
-        (e) => {
-
-          const result =
-            e.target.result;
-
-          imageBase64 =
-            result.substring(
-              result.indexOf(",") + 1
-            );
-
-        };
+  const reader = new FileReader();
 
 
-      reader.onerror =
-        () => {
+  reader.onload = function(e) {
 
-          alert(
-            "사진을 읽는 중 오류가 발생했어."
-          );
+    const dataUrl = e.target.result;
 
-          imageBase64 = null;
-          imageMime = null;
+    imageBase64 =
+      dataUrl.substring(
+        dataUrl.indexOf(",") + 1
+      );
 
-        };
-
-
-      reader.readAsDataURL(file);
-
-    }
-  );
+  };
 
 
+  reader.onerror = function() {
 
-/* =====================================================
-   MAIN ANALYSIS
-===================================================== */
+    imageBase64 = null;
+    imageMime = null;
+
+    alert("사진을 읽을 수 없어.");
+
+  };
+
+
+  reader.readAsDataURL(file);
+
+});
+
+
+/* ============================================
+   ANALYSIS
+============================================ */
 
 async function runAnalysis() {
 
   const key =
     localStorage.getItem("API_KEY")
     ||
-    document
-      .getElementById("apiKey")
-      .value
-      .trim();
+    document.getElementById("apiKey").value.trim();
 
 
   if (!key) {
 
-    alert(
-      "Gemini API Key를 입력하고 저장해줘!"
-    );
+    alert("Gemini API Key를 입력하고 저장해줘!");
 
     return;
 
@@ -400,17 +357,12 @@ async function runAnalysis() {
 
 
   const memo =
-    document
-      .getElementById("memo")
-      .value
-      .trim();
+    document.getElementById("memo").value.trim();
 
 
   if (!memo && !imageBase64) {
 
-    alert(
-      "현장 상황 메모 또는 사진을 입력해줘!"
-    );
+    alert("현장 상황 메모 또는 사진을 넣어줘!");
 
     return;
 
@@ -434,146 +386,157 @@ async function runAnalysis() {
   status.style.color = "#2563eb";
 
   status.innerText =
-    "🔎 현장 상황을 분석하고 있습니다...";
+    "🔎 Gemini 3.8 Flash가 현장 상황을 분석 중입니다...";
 
 
   try {
 
 
-    /* ---------------------------------------------
-       USER PARTS
-    --------------------------------------------- */
+    /* ========================================
+       PROMPT
+    ======================================== */
 
-    const parts = [];
+    const prompt = `
+You are assisting a U.S. Army Environmental Health Technician
+conducting a food sanitation inspection.
 
+Analyze the field observation using food safety principles
+applicable to TB MED 530.
 
-    if (memo) {
+FIELD OBSERVATION:
+${memo || "See attached inspection photograph."}
 
-      parts.push({
+Your task is to produce three items:
 
-        text:
-`INSPECTION OBSERVATION:
-
-${memo}
-
-Analyze this field observation as an Environmental Health food inspection finding.
-
-Use TB MED 530 food sanitation principles.
-
-Return a concise professional inspection finding.
+1. REF
+Provide the applicable TB MED 530 reference.
 
 IMPORTANT:
-Do not invent a TB MED 530 paragraph or section number.
-If the exact regulatory citation cannot be determined with confidence, state:
-"TB MED 530 – verify exact section."
+Never fabricate a paragraph, section, chapter, table,
+or regulatory citation.
 
-DEF must describe only the observed deficiency.
+If you cannot determine the exact TB MED 530 citation
+with confidence from the information provided,
+write exactly:
 
-REC must clearly state the corrective action.
+TB MED 530 – verify exact section.
 
-Use professional U.S. Army Environmental Health inspection language.`
+2. DEF
+Write a concise professional deficiency statement
+appropriate for an Environmental Health inspection report.
 
-      });
+Describe what was actually observed.
 
-    }
+Do not invent facts that were not supplied by the inspector
+or clearly visible in the photograph.
 
+3. REC
+Write a concise professional recommendation describing
+the corrective action required.
+
+Use professional U.S. Army Environmental Health
+inspection language.
+
+Keep DEF and REC concise and suitable for direct
+copying into an inspection report.
+`;
+
+
+    /* ========================================
+       INTERACTIONS INPUT
+    ======================================== */
+
+    const input = [
+
+      {
+        type: "text",
+        text: prompt
+      }
+
+    ];
+
+
+    /*
+      사진이 있으면 Interactions API의
+      inline image 형식으로 추가
+    */
 
     if (imageBase64) {
 
-      parts.push({
+      input.push({
 
-        inline_data: {
+        type: "image",
 
-          mime_type:
-            imageMime || "image/jpeg",
+        data: imageBase64,
 
-          data:
-            imageBase64
-
-        }
+        mime_type:
+          imageMime || "image/jpeg"
 
       });
 
     }
 
 
-
-    /* ---------------------------------------------
+    /* ========================================
        REQUEST BODY
-    --------------------------------------------- */
+    ======================================== */
 
-    const requestBody = {
+    const body = {
 
-      system_instruction: {
+      model: "gemini-3.8-flash",
 
-        parts: [
+      input: input,
 
-          {
+      system_instruction:
+        `You are a professional Environmental Health
+inspection writing assistant.
 
-            text:
-`You are an Environmental Health inspection writing assistant.
+Your primary task is to help prepare concise food sanitation
+inspection findings.
 
-Your job is to convert field observations into professional food sanitation inspection findings.
+Never fabricate regulatory citations.
 
-Primary regulatory framework:
-TB MED 530.
+Do not assume facts that are not contained in the inspector's
+observation or clearly visible in an attached photograph.
 
-Never fabricate regulation paragraph numbers.
+Return only the requested structured JSON response.`,
 
-If an exact regulatory reference cannot be verified from the information available, use:
-"TB MED 530 – verify exact section."
 
-Write in concise professional inspection English suitable for an Environmental Health inspection report.
+      generation_config: {
 
-Return ONLY valid JSON matching the requested schema.
-
-Do not include Markdown.
-Do not include code fences.
-Do not add commentary outside the JSON.`
-
-          }
-
-        ]
+        temperature: 0.2
 
       },
 
 
-      contents: [
+      response_format: {
 
-        {
+        type: "text",
 
-          role: "user",
+        mime_type: "application/json",
 
-          parts: parts
+        schema: {
 
-        }
-
-      ],
-
-
-      generationConfig: {
-
-        temperature: 0.2,
-
-        responseMimeType:
-          "application/json",
-
-        responseSchema: {
-
-          type: "OBJECT",
+          type: "object",
 
           properties: {
 
             ref: {
-              type: "STRING"
+              type: "string",
+              description:
+                "Applicable TB MED 530 reference."
             },
 
             def: {
-              type: "STRING"
+              type: "string",
+              description:
+                "Professional deficiency statement."
             },
 
             rec: {
-              type: "STRING"
+              type: "string",
+              description:
+                "Professional corrective recommendation."
             }
 
           },
@@ -582,7 +545,9 @@ Do not add commentary outside the JSON.`
             "ref",
             "def",
             "rec"
-          ]
+          ],
+
+          additionalProperties: false
 
         }
 
@@ -591,26 +556,13 @@ Do not add commentary outside the JSON.`
     };
 
 
-
-    /* ---------------------------------------------
-       GEMINI API
-    --------------------------------------------- */
-
-    const model =
-      "gemini-2.5-flash";
-
-
-    const url =
-      "https://generativelanguage.googleapis.com/v1beta/models/"
-      + model
-      + ":generateContent?key="
-      + encodeURIComponent(key);
-
-
+    /* ========================================
+       INTERACTIONS API
+    ======================================== */
 
     const response =
       await fetch(
-        url,
+        "https://generativelanguage.googleapis.com/v1beta/interactions",
         {
 
           method: "POST",
@@ -618,27 +570,27 @@ Do not add commentary outside the JSON.`
           headers: {
 
             "Content-Type":
-              "application/json"
+              "application/json",
+
+            "x-goog-api-key":
+              key
 
           },
 
           body:
-            JSON.stringify(
-              requestBody
-            )
+            JSON.stringify(body)
 
         }
       );
 
 
-
-    /* ---------------------------------------------
-       HTTP ERROR
-    --------------------------------------------- */
+    /* ========================================
+       ERROR RESPONSE
+    ======================================== */
 
     if (!response.ok) {
 
-      let message =
+      let errorMessage =
         "Gemini API 요청에 실패했습니다.";
 
 
@@ -654,7 +606,7 @@ Do not add commentary outside the JSON.`
           errorData.error.message
         ) {
 
-          message =
+          errorMessage =
             errorData.error.message;
 
         }
@@ -663,79 +615,94 @@ Do not add commentary outside the JSON.`
 
       catch (e) {
 
-        /* ignore JSON parse error */
+        // JSON 오류 응답이 아닌 경우
 
       }
 
 
-      throw new Error(
-        message
-      );
+      throw new Error(errorMessage);
 
     }
 
 
-
-    /* ---------------------------------------------
+    /* ========================================
        RESPONSE
-    --------------------------------------------- */
+    ======================================== */
 
     const data =
       await response.json();
 
 
-    const candidate =
-      data?.candidates?.[0];
+    console.log(
+      "Gemini interaction response:",
+      data
+    );
 
 
-    if (!candidate) {
+    /*
+      Interactions API는 output_text를 반환한다.
+    */
 
-      throw new Error(
-        "Gemini에서 분석 결과를 반환하지 않았습니다."
-      );
+    let outputText =
+      data.output_text || "";
+
+
+    /*
+      혹시 output_text가 없는 응답 형태에 대비해서
+      steps 안의 model_output text도 확인한다.
+    */
+
+    if (!outputText && Array.isArray(data.steps)) {
+
+      const texts = [];
+
+
+      for (const step of data.steps) {
+
+        if (!step) continue;
+
+
+        if (
+          step.type === "model_output" &&
+          Array.isArray(step.content)
+        ) {
+
+          for (const item of step.content) {
+
+            if (
+              item &&
+              item.type === "text" &&
+              item.text
+            ) {
+
+              texts.push(item.text);
+
+            }
+
+          }
+
+        }
+
+      }
+
+
+      outputText = texts.join("");
 
     }
-
-
-    const responseParts =
-      candidate?.content?.parts;
-
-
-    if (
-      !responseParts ||
-      !responseParts.length
-    ) {
-
-      throw new Error(
-        "Gemini 응답 내용이 비어 있습니다."
-      );
-
-    }
-
-
-    const outputText =
-      responseParts
-        .map(
-          part =>
-            part.text || ""
-        )
-        .join("")
-        .trim();
 
 
     if (!outputText) {
 
       throw new Error(
-        "분석 결과가 비어 있습니다."
+        "Gemini가 분석 결과를 반환하지 않았습니다."
       );
 
     }
 
 
-
-    /* ---------------------------------------------
-       PARSE JSON
-    --------------------------------------------- */
+    /* ========================================
+       JSON PARSE
+    ======================================== */
 
     let result;
 
@@ -743,50 +710,51 @@ Do not add commentary outside the JSON.`
     try {
 
       result =
-        JSON.parse(
-          outputText
-        );
+        JSON.parse(outputText);
 
     }
 
     catch (e) {
 
       console.error(
-        "RAW GEMINI RESPONSE:",
+        "RAW OUTPUT:",
         outputText
       );
 
       throw new Error(
-        "Gemini 결과를 읽을 수 없습니다."
+        "Gemini 결과를 JSON으로 읽을 수 없습니다."
       );
 
     }
 
 
+    /* ========================================
+       RESULT
+    ======================================== */
 
-    /* ---------------------------------------------
-       SHOW RESULT
-    --------------------------------------------- */
-
-    document
-      .getElementById("outRef")
-      .innerText =
-        result.ref ||
-        "TB MED 530 – verify exact section.";
+    const ref =
+      result.ref ||
+      "TB MED 530 – verify exact section.";
 
 
-    document
-      .getElementById("outDef")
-      .innerText =
-        result.def ||
-        "No deficiency generated.";
+    const def =
+      result.def ||
+      "No deficiency generated.";
 
 
-    document
-      .getElementById("outRec")
-      .innerText =
-        result.rec ||
-        "No recommendation generated.";
+    const rec =
+      result.rec ||
+      "No recommendation generated.";
+
+
+    document.getElementById("outRef").innerText =
+      ref;
+
+    document.getElementById("outDef").innerText =
+      def;
+
+    document.getElementById("outRec").innerText =
+      rec;
 
 
     resultArea.style.display =
@@ -803,11 +771,6 @@ Do not add commentary outside the JSON.`
 
   }
 
-
-  /* =================================================
-     ERROR
-  ================================================= */
-
   catch (error) {
 
     console.error(error);
@@ -817,27 +780,29 @@ Do not add commentary outside the JSON.`
       "#dc2626";
 
 
-    let msg =
+    let message =
       error.message ||
       "알 수 없는 오류가 발생했습니다.";
 
 
-    /* 너무 긴 Gemini 오류 방지 */
+    /*
+      화면에 엄청 긴 API 오류가 출력되는 것 방지
+    */
 
-    if (msg.length > 300) {
+    if (message.length > 400) {
 
-      msg =
-        msg.substring(0, 300)
+      message =
+        message.substring(0, 400)
         + "...";
 
     }
 
 
     status.innerText =
-      "❌ 분석 실패\n" + msg;
+      "❌ 분석 실패\n" +
+      message;
 
   }
-
 
   finally {
 
@@ -848,29 +813,20 @@ Do not add commentary outside the JSON.`
 }
 
 
-
-/* =====================================================
-   COPY
-===================================================== */
+/* ============================================
+   COPY RESULT
+============================================ */
 
 async function copyAll() {
 
   const ref =
-    document
-      .getElementById("outRef")
-      .innerText;
-
+    document.getElementById("outRef").innerText;
 
   const def =
-    document
-      .getElementById("outDef")
-      .innerText;
-
+    document.getElementById("outDef").innerText;
 
   const rec =
-    document
-      .getElementById("outRec")
-      .innerText;
+    document.getElementById("outRec").innerText;
 
 
   const text =
@@ -883,50 +839,28 @@ REC: ${rec}`;
 
   try {
 
-    await navigator.clipboard.writeText(
-      text
-    );
+    await navigator.clipboard.writeText(text);
 
-
-    alert(
-      "REF / DEF / REC가 복사되었어!"
-    );
+    alert("REF / DEF / REC가 복사되었어!");
 
   }
 
   catch (error) {
 
-    const textarea =
-      document.createElement(
-        "textarea"
-      );
+    const temp =
+      document.createElement("textarea");
 
+    temp.value = text;
 
-    textarea.value =
-      text;
+    document.body.appendChild(temp);
 
+    temp.select();
 
-    document.body.appendChild(
-      textarea
-    );
+    document.execCommand("copy");
 
+    document.body.removeChild(temp);
 
-    textarea.select();
-
-
-    document.execCommand(
-      "copy"
-    );
-
-
-    document.body.removeChild(
-      textarea
-    );
-
-
-    alert(
-      "REF / DEF / REC가 복사되었어!"
-    );
+    alert("REF / DEF / REC가 복사되었어!");
 
   }
 
