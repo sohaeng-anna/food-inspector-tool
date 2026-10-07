@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TB MED 530 Inspector Tool v2.0</title>
+  <title>TB MED 530 Inspector Tool</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; max-width: 600px; margin: 0 auto; background: #f8fafc; }
     h2 { color: #1e3a8a; text-align: center; margin-bottom: 15px; }
     .box { background: white; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 12px; }
     input, textarea, button { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 6px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 15px; }
-    textarea { height: 75px; resize: vertical; }
+    textarea { height: 80px; resize: vertical; }
     button { background: #1e3a8a; color: white; font-weight: bold; cursor: pointer; border: none; margin-top: 10px; }
     button:disabled { background: #94a3b8; }
     .res-box { display: none; background: #f1f5f9; padding: 12px; border-radius: 6px; margin-top: 12px; }
@@ -20,7 +20,7 @@
 </head>
 <body>
 
-  <h2>📋 TB MED 530 Inspector (최신버전)</h2>
+  <h2>📋 TB MED 530 Inspector</h2>
 
   <div class="box">
     <label><b>Gemini API Key:</b></label>
@@ -32,13 +32,13 @@
 
   <div class="box">
     <label><b>현장 상황 메모:</b></label>
-    <textarea id="memo" placeholder="예: 냉장고 온도가 화씨 45도임"></textarea>
+    <textarea id="memo" placeholder="예: RIF 온도가 화씨 45도임"></textarea>
 
-    <label style="margin-top:10px; display:block;"><b>현장 사진 첨부:</b></label>
+    <label style="margin-top:10px; display:block;"><b>현장 사진 첨부 (선택):</b></label>
     <input type="file" id="pic" accept="image/*" capture="environment">
 
     <button id="runBtn" onclick="runAnalysis()">DEF / REC 생성하기</button>
-    <div id="status" style="text-align:center; color:#dc2626; font-size:13px; margin-top:10px; word-break:break-all;"></div>
+    <div id="status" style="text-align:center; color:#2563eb; font-size:13px; margin-top:10px; word-break:break-all;"></div>
 
     <div class="res-box" id="resultArea">
       <div class="res-title">REF (Reference)</div>
@@ -84,87 +84,66 @@
       const status = document.getElementById("status");
       const resArea = document.getElementById("resultArea");
       btn.disabled = true;
-      status.style.color = "#475569";
-      status.innerText = "사용 가능한 AI 모델 검색 및 매칭 중...";
+      status.style.color = "#2563eb";
+      status.innerText = "TB MED 530 규정 매칭 중...";
       resArea.style.display = "none";
 
-      const systemPrompt = `You are a certified Environmental Health Inspector specializing in TB MED 530 (Tri-Service Food Code).
-Analyze this food inspection finding and output strictly valid JSON without markdown fences:
+      const promptText = `You are a certified Environmental Health Inspector specializing in TB MED 530 (Tri-Service Food Code).
+Analyze the inspection finding described: "${txt || 'Attached image finding'}".
+Provide output strictly formatted as plain JSON without markdown code blocks:
 {
   "ref": "TB MED 530 provision number & short title",
-  "def": "Concise standard USFK/DoD deficiency text",
+  "def": "Concise standard USFK/DoD deficiency statement",
   "rec": "Actionable standard corrective recommendation"
 }`;
 
-      const parts = [];
-      if (txt) parts.push({ text: `Observation: ${txt}` });
-      if (b64) parts.push({ inline_data: { mime_type: mime, data: b64 } });
-
-      const payload = {
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: "user", parts: parts }],
-        generationConfig: { response_mime_type: "application/json", temperature: 0.2 }
-      };
-
       try {
-        // 1. 내 API 키로 사용 가능한 모델 목록 자동 조회
-        const modelListRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${k}`);
-        const modelListData = await modelListRes.json();
-        
-        let candidateModels = [];
-        if (modelListData.models) {
-          candidateModels = modelListData.models
-            .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
-            .map(m => m.name.replace("models/", ""));
+        // 최신 Interactions API 호출 (x-goog-api-key 헤더 규격)
+        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": k
+          },
+          body: JSON.stringify({
+            model: "gemini-3.8-flash",
+            input: promptText
+          })
+        });
+
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+
+        let outputStr = "";
+        if (data.outputs && data.outputs.length > 0) {
+          outputStr = data.outputs[data.outputs.length - 1].text || "";
+        } else if (data.output_text) {
+          outputStr = data.output_text;
         }
 
-        // 우선순위 정렬: flash 계열 우선
-        candidateModels.sort((a, b) => (b.includes("flash") ? 1 : 0) - (a.includes("flash") ? 1 : 0));
+        if (!outputStr) throw new Error("결과 텍스트를 불러오지 못했어.");
 
-        if (candidateModels.length === 0) {
-          candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
-        }
+        outputStr = outputStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(outputStr);
 
-        let done = false;
-        let lastErr = "";
+        document.getElementById("outRef").innerText = parsed.ref;
+        document.getElementById("outDef").innerText = parsed.def;
+        document.getElementById("outRec").innerText = parsed.rec;
 
-        for (const targetModel of candidateModels) {
-          try {
-            status.innerText = `[${targetModel}] 분석 중...`;
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${k}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (data.error) {
-              lastErr = data.error.message;
-              continue;
-            }
-
-            let raw = data.candidates[0].content.parts[0].text;
-            raw = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
-            const parsed = JSON.parse(raw);
-            document.getElementById("outRef").innerText = parsed.ref;
-            document.getElementById("outDef").innerText = parsed.def;
-            document.getElementById("outRec").innerText = parsed.rec;
-            resArea.style.display = "block";
-            status.innerText = "";
-            done = true;
-            break;
-          } catch (e) {
-            lastErr = e.message;
-          }
-        }
-
-        if (!done) {
-          status.style.color = "#dc2626";
-          status.innerText = "오류 발생: " + lastErr;
-        }
-
-      } catch (networkErr) {
+        resArea.style.display = "block";
+        status.innerText = "";
+      } catch (err) {
         status.style.color = "#dc2626";
-        status.innerText = "API 통신 오류: " + networkErr.message;
+        status.innerText = "오류: " + err.message;
       } finally {
         btn.disabled = false;
       }
+    }
+
+    function copyAll() {
+      const text = `REF: ${document.getElementById("outRef").innerText}\nDEF: ${document.getElementById("outDef").innerText}\nREC: ${document.getElementById("outRec").innerText}`;
+      navigator.clipboard.writeText(text).then(() => alert("전체 복사 완료!"));
+    }
+  </script>
+</body>
+</html>
