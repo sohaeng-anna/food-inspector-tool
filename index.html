@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>TB MED 530 Inspector Tool</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; max-width: 600px; margin: 0 auto; background: #f8fafc; }
@@ -20,7 +23,7 @@
 </head>
 <body>
 
-  <h2>📋 TB MED 530 Inspector</h2>
+  <h2>📋 TB MED 530 Inspector Tool</h2>
 
   <div class="box">
     <label><b>Gemini API Key:</b></label>
@@ -83,22 +86,18 @@
       const btn = document.getElementById("runBtn");
       const status = document.getElementById("status");
       const resArea = document.getElementById("resultArea");
+
       btn.disabled = true;
       status.style.color = "#2563eb";
-      status.innerText = "TB MED 530 규정 매칭 중...";
+      status.innerText = "규정 분석 및 생성 중...";
       resArea.style.display = "none";
 
       const promptText = `You are a certified Environmental Health Inspector specializing in TB MED 530 (Tri-Service Food Code).
-Analyze the inspection finding described: "${txt || 'Attached image finding'}".
-Provide output strictly formatted as plain JSON without markdown code blocks:
-{
-  "ref": "TB MED 530 provision number & short title",
-  "def": "Concise standard USFK/DoD deficiency statement",
-  "rec": "Actionable standard corrective recommendation"
-}`;
+Analyze this food inspection finding: "${txt || 'See inspection photograph'}".
+Output strictly valid JSON without any markdown code fences:
+{"ref": "TB MED 530 provision number & title", "def": "Deficiency statement", "rec": "Corrective recommendation"}`;
 
       try {
-        // 최신 Interactions API 호출 (x-goog-api-key 헤더 규격)
         const res = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
           method: "POST",
           headers: {
@@ -114,21 +113,19 @@ Provide output strictly formatted as plain JSON without markdown code blocks:
         const data = await res.json();
         if (data.error) throw new Error(data.error.message);
 
-        let outputStr = "";
-        if (data.outputs && data.outputs.length > 0) {
-          outputStr = data.outputs[data.outputs.length - 1].text || "";
-        } else if (data.output_text) {
-          outputStr = data.output_text;
+        let out = data.output_text || (data.outputs && data.outputs[0]?.text) || "";
+        out = out.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+        try {
+          const parsed = JSON.parse(out);
+          document.getElementById("outRef").innerText = parsed.ref;
+          document.getElementById("outDef").innerText = parsed.def;
+          document.getElementById("outRec").innerText = parsed.rec;
+        } catch {
+          document.getElementById("outRef").innerText = "TB MED 530";
+          document.getElementById("outDef").innerText = out;
+          document.getElementById("outRec").innerText = "Apply standard corrective actions.";
         }
-
-        if (!outputStr) throw new Error("결과 텍스트를 불러오지 못했어.");
-
-        outputStr = outputStr.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(outputStr);
-
-        document.getElementById("outRef").innerText = parsed.ref;
-        document.getElementById("outDef").innerText = parsed.def;
-        document.getElementById("outRec").innerText = parsed.rec;
 
         resArea.style.display = "block";
         status.innerText = "";
